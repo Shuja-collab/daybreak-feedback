@@ -27,7 +27,7 @@ const KEY='daybreak-v1';let state=load();function fresh(){return{entries:[],pack
 import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js";
 import {GLTFLoader} from "https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/loaders/GLTFLoader.js";
 import {OrbitControls} from "https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/controls/OrbitControls.js";
-const ids={smoke:"viewerSmoke",air:"viewerAir",combined:"viewerCombined"},tints={smoke:0x76594c,air:0x727a75,combined:0x665d56},views={},particleCount=180,breathSeconds=5;
+const ids={smoke:"viewerSmoke",air:"viewerAir",combined:"viewerCombined"},tints={smoke:0xf0d7c8,air:0x9be0c0,combined:0xffc36b},views={},particleCount=180,breathSeconds=5;
 const airwayPaths=[
 [[0,.94,.13],[0,.72,.14],[0,.43,.14],[0,.18,.15],[-.20,.16,.15],[-.39,.20,.13],[-.55,.20,.10]],
 [[0,.94,.13],[0,.72,.14],[0,.43,.14],[0,.18,.15],[-.20,.16,.15],[-.39,.05,.14],[-.43,-.22,.10]],
@@ -50,7 +50,7 @@ function create(key){
  const v={key,renderer,scene,camera,controls,materials:[],dust:null,model:null,baseScale:1};views[key]=v;
  const resize=()=>{const w=Math.max(1,canvas.clientWidth),h=Math.max(1,canvas.clientHeight);renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix()};new ResizeObserver(resize).observe(canvas);resize();
  document.querySelectorAll('[data-reset="'+key+'"]').forEach(b=>b.addEventListener("click",()=>{controls.reset();camera.position.set(0,.04,3.25)}));
- function animate(){requestAnimationFrame(animate);const phase=(performance.now()/1000%breathSeconds)/breathSeconds;controls.update();if(v.model){const inhale=phase<.42?Math.sin(phase/.42*Math.PI/2):Math.cos((phase-.42)/.58*Math.PI/2);v.model.scale.set(v.baseScale*(1+inhale*.012),v.baseScale*(1+inhale*.02),v.baseScale*(1+inhale*.012))}if(v.dust){const pos=v.dust.geometry.attributes.position;for(let i=0;i<particleCount;i++){const p=(phase+i/particleCount)%1;let u;if(p<.42)u=p/.42;else if(p<.52)u=1;else u=1-((p-.52)/.48)*.45;const point=curves[i%curves.length].getPointAt(Math.max(0,Math.min(1,u)));pos.setXYZ(i,point.x,point.y,point.z)}pos.needsUpdate=true}renderer.render(scene,camera)}animate()
+ function animate(){requestAnimationFrame(animate);const phase=(performance.now()/1000%breathSeconds)/breathSeconds;controls.update();if(v.model){const inhale=phase<.42?Math.sin(phase/.42*Math.PI/2):Math.cos((phase-.42)/.58*Math.PI/2);v.model.scale.set(v.baseScale*(1+inhale*.035),v.baseScale*(1+inhale*.055),v.baseScale*(1+inhale*.035))}if(v.dust){const pos=v.dust.geometry.attributes.position;for(let i=0;i<particleCount;i++){const p=(phase+i/particleCount)%1;let u;if(p<.42)u=p/.42;else if(p<.52)u=1;else u=1-((p-.52)/.48)*.45;const point=curves[i%curves.length].getPointAt(Math.max(0,Math.min(1,u)));pos.setXYZ(i,point.x,point.y,point.z)}pos.needsUpdate=true}renderer.render(scene,camera)}animate()
 }
 function addModel(v){
  const model=source.clone(true),box0=new THREE.Box3().setFromObject(source),size=box0.getSize(new THREE.Vector3()),center=box0.getCenter(new THREE.Vector3()),scale=2/Math.max(size.x,size.y,size.z);v.baseScale=scale;
@@ -58,11 +58,11 @@ function addModel(v){
  model.traverse(o=>{if(o.isMesh){const orig=Array.isArray(o.material)?o.material:[o.material],mats=orig.map(m=>{const c=m.clone();v.materials.push({m:c,color:c.color?c.color.clone():new THREE.Color("white")});return c});o.material=Array.isArray(o.material)?mats:mats[0]}});
  v.model=model;v.scene.add(model);
  const positions=new Float32Array(particleCount*3),geometry=new THREE.BufferGeometry();geometry.setAttribute("position",new THREE.BufferAttribute(positions,3).setUsage(THREE.DynamicDrawUsage));geometry.setDrawRange(0,0);
- v.dust=new THREE.Points(geometry,new THREE.PointsMaterial({color:tints[v.key],size:.018,transparent:true,opacity:.72,depthWrite:false,sizeAttenuation:true}));v.scene.add(v.dust)
+ v.dust=new THREE.Points(geometry,new THREE.PointsMaterial({color:tints[v.key],size:7,transparent:true,opacity:.88,depthTest:false,depthWrite:false,sizeAttenuation:false}));v.scene.add(v.dust)
 }
 function apply(){
  const smoke=Math.min(1,logged/20),air=aqi==null?0:Math.max(0,Math.min(1,(aqi-20)/180)),levels={smoke,air,combined:1-(1-smoke*.78)*(1-air*.78)};
- for(const key of Object.keys(views)){const v=views[key],n=levels[key],tint=new THREE.Color(tints[key]);for(const item of v.materials){item.m.color.copy(item.color).lerp(tint,n*(key==="combined"?.48:.4));if("roughness"in item.m)item.m.roughness=Math.min(.96,(item.m.roughness||.65)+n*.18)}if(v.dust){v.dust.geometry.setDrawRange(0,Math.floor(particleCount*n));v.dust.material.opacity=.5+n*.38;v.dust.material.size=.014+n*.016}}
+ for(const key of Object.keys(views)){const v=views[key],n=levels[key],tint=new THREE.Color(tints[key]);for(const item of v.materials){item.m.color.copy(item.color).lerp(tint,n*(key==="combined"?.48:.4));if("roughness"in item.m)item.m.roughness=Math.min(.96,(item.m.roughness||.65)+n*.18)}if(v.dust){v.dust.geometry.setDrawRange(0,n>0?Math.max(48,Math.floor(particleCount*n)):0);v.dust.material.opacity=.76+n*.22;v.dust.material.size=5+n*4}}
  status("smokeValue",logged+" cigarette"+(logged===1?"":"s")+" logged today");status("airValue",aqi==null?"Refresh local AQI to include air exposure":"AQI "+aqi+" · modelled area estimate");status("combinedValue",(logged?"Smoking logged":"No cigarettes logged")+(aqi==null?" · AQI not loaded":" · AQI "+aqi));
  const note="Particles move on a simulated breath cycle. Their density follows logged exposure; they are not measured inhaled dose or actual lung damage.";for(const id of ["smokeDisclaimer","airDisclaimer","combinedDisclaimer"])status(id,note)
 }
